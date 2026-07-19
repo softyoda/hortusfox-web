@@ -109,9 +109,10 @@ class AdminController extends BaseController {
 			$enablepwa = (bool)$request->params()->query('enablepwa', 0);
 			$plantrec_enable = (bool)$request->params()->query('plantrec_enable', 0);
 			$plantrec_apikey = $request->params()->query('plantrec_apikey', app('plantrec_apikey'));
-			$plantrec_quickscan = (bool)$request->params()->query('plantrec_quickscan', 0);
+		$plantrec_quickscan = (bool)$request->params()->query('plantrec_quickscan', 0);
+		$enable_public_sharing = (bool)$request->params()->query('enable_public_sharing', 0);
 
-			$set = [
+		$set = [
 				'workspace' => $workspace,
 				'language' => $lang,
 				'timezone' => $timezone,
@@ -133,10 +134,11 @@ class AdminController extends BaseController {
 				'cronjob_pw' => $cronpw,
 				'custom_head_code' => $custom_head_code,
 				'pwa_enable' => $enablepwa,
-				'plantrec_enable' => $plantrec_enable,
-				'plantrec_apikey' => $plantrec_apikey,
-				'plantrec_quickscan' => $plantrec_quickscan
-			];
+			'plantrec_enable' => $plantrec_enable,
+			'plantrec_apikey' => $plantrec_apikey,
+			'plantrec_quickscan' => $plantrec_quickscan,
+			'enable_public_sharing' => $enable_public_sharing
+		];
 
 			AppModel::updateSet($set);
 

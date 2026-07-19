@@ -178,6 +178,14 @@
 
         <div class="field">
             <div class="control">
+                <input type="checkbox" class="checkbox" name="enable_public_sharing" value="1" {{ (app('enable_public_sharing', false)) ? 'checked': '' }}>&nbsp;<span>Enable public sharing (read-only share links for collections &amp; plants)</span>
+            </div>
+        </div>
+
+        <div><hr></div>
+
+        <div class="field">
+            <div class="control">
                 <input type="checkbox" class="checkbox" name="enablephotoshare" value="1" {{ (app('enable_media_share')) ? 'checked': '' }}>&nbsp;<span>{{ __('app.enable_photo_share') }}</span>
             </div>
         </div>

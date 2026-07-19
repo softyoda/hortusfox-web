@@ -506,5 +506,43 @@
 		<span>
 			<a class="button" href="javascript:void(0);" onclick="document.getElementById('title-plant-qr-code').value = '#{{ $plant->get('id') }} ' + document.getElementById('plant-details-plant-name-{{ $plant->get('id') }}').innerText; window.vue.generateAndShowQRCode({{ $plant->get('id') }});">{{ __('app.show_qr_code') }}</a>
 		</span>
+
+		@if (app('enable_public_sharing', false))
+		<span id="share-plant-wrap-{{ $plant->get('id') }}">
+			@if ($plant_share)
+				<a class="button is-success" href="{{ url('/public/share/token/' . $plant_share->get('token')) }}" target="_blank" title="Open public view"><i class="fas fa-external-link-alt"></i>&nbsp;Public link</a>&nbsp;
+				<a class="button is-danger" href="javascript:void(0);" onclick="revokeSharePlant({{ $plant->get('id') }});" title="Revoke public link"><i class="fas fa-unlink"></i></a>
+			@else
+				<a class="button is-link" href="javascript:void(0);" onclick="createSharePlant({{ $plant->get('id') }});"><i class="fas fa-share-alt"></i>&nbsp;Share plant</a>
+			@endif
+		</span>
+		@endif
 	</div>
 </div>
+
+@if (app('enable_public_sharing', false))
+<script>
+function createSharePlant(plantId) {
+    if (!confirm('Generate a public share link for this plant? Anyone with the link can view it (read-only).')) return;
+    fetch('/public/share/create', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'type=plant&entity_id=' + encodeURIComponent(plantId)
+    }).then(r => r.json()).then(data => {
+        if (data.code === 200) { location.reload(); }
+        else { alert('Error: ' + (data.msg || 'Unknown error')); }
+    });
+}
+function revokeSharePlant(plantId) {
+    if (!confirm('Revoke the public link for this plant?')) return;
+    fetch('/public/share/revoke', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'type=plant&entity_id=' + encodeURIComponent(plantId)
+    }).then(r => r.json()).then(data => {
+        if (data.code === 200) { location.reload(); }
+        else { alert('Error: ' + (data.msg || 'Unknown error')); }
+    });
+}
+</script>
+@endif

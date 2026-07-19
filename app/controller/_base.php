@@ -39,16 +39,21 @@ class BaseController extends Asatru\Controller\Controller {
 		if (!$auth_user) {
 			$url = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
-			$allowed_urls = array(
-				'/auth', 
-				'/login', 
-				'/password/restore', 
-				'/password/reset',
-				'/cronjob/tasks/overdue',
-				'/cronjob/tasks/tomorrow',
-				'/cronjob/calendar/reminder',
-				'/cronjob/backup/auto'
-			);
+		$allowed_urls = array(
+			'/auth', 
+			'/login', 
+			'/password/restore', 
+			'/password/reset',
+			'/cronjob/tasks/overdue',
+			'/cronjob/tasks/tomorrow',
+			'/cronjob/calendar/reminder',
+			'/cronjob/backup/auto'
+		);
+
+		// Public share routes bypass auth entirely (handled by PublicShareController)
+		if (strpos($url, '/public/share/') === 0) {
+			return;
+		}
 
 			if (!in_array($url, $allowed_urls)) {
 				header('Location: /auth?redirect=' . urlencode($_SERVER['REQUEST_URI']));

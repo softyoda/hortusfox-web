@@ -167,6 +167,12 @@ return [
     array('/share/photo/post', 'POST', 'share@share_photo'),
     array('/share/photo/remove', 'ANY', 'share@remove_photo'),
 
+    /** Public Share Controller */
+    array('/public/share/token/{token}', 'GET', 'public_share@view_shared'),
+    array('/public/share/log/fetch', 'ANY', 'public_share@fetch_log'),
+    array('/public/share/create', 'POST', 'public_share@create_share'),
+    array('/public/share/revoke', 'POST', 'public_share@revoke_share'),
+
     /** API Controller */
     array('/api/plants/get', 'ANY', 'api@get_plant'),
     array('/api/plants/add', 'ANY', 'api@add_plant'),

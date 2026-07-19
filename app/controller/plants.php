@@ -47,6 +47,8 @@ class PlantsController extends BaseController {
 			return redirect('/plants/location/' . $location);
 		}
 		
+		$location_share = app('enable_public_sharing', false) ? PublicShareModel::getByEntity(PublicShareModel::TYPE_LOCATION, $location) : null;
+
 		return parent::view(['content', 'plants'], [
 			'user' => $user,
 			'plants' => $plants,
@@ -54,7 +56,8 @@ class PlantsController extends BaseController {
 			'sorting_dirs' => PlantsModel::$sorting_dir,
 			'location' => $location,
 			'location_data' => LocationsModel::getLocationById($location),
-			'location_log_entries' => $location_log_entries
+			'location_log_entries' => $location_log_entries,
+			'location_share' => $location_share
 		]);
 	}
 
@@ -216,6 +219,8 @@ class PlantsController extends BaseController {
 		}
 
 		$offspring = PlantsModel::findOffspring($plant_id);
+
+		$plant_share = app('enable_public_sharing', false) ? PublicShareModel::getByEntity(PublicShareModel::TYPE_PLANT, $plant_id) : null;
 		
 		return parent::view(['content', 'details'], [
 			'user' => $user,
@@ -228,6 +233,7 @@ class PlantsController extends BaseController {
 			'plant_tasks' => $plant_tasks,
 			'plant_log_entries' => $plant_log_entries,
 			'offspring' => $offspring,
+			'plant_share' => $plant_share,
 			'edit_user_name' => $edit_user_name,
 			'edit_user_when' => $edit_user_when
 		]);
