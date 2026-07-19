@@ -1,25 +1,26 @@
-# First stage: Composer installation
+# Stage 1: Composer installation
 FROM composer:latest AS composer
 
-# Set the working directory in the Composer container
 WORKDIR /app
-
-# Copy the composer.json and composer.lock files
 COPY composer.json composer.lock ./
-
-# Install dependencies
 RUN composer install --no-scripts --no-autoloader
-
-# Optimize the autoloader
 RUN composer dump-autoload --optimize
 
-# Second stage: Apache + PHP setup
+# Stage 2: Node / webpack build
+FROM node:20-alpine AS node_builder
+
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY webpack.config.js ./
+COPY app/resources ./app/resources
+RUN npm run build
+
+# Stage 3: Apache + PHP runtime
 FROM php:8.4-apache
 
-# Set the working directory
 WORKDIR /var/www/html
 
-# Install system dependencies
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y \
         libpng-dev \
@@ -35,7 +36,6 @@ RUN apt-get update \
         tzdata \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/* \
-# Install PHP extensions
  && docker-php-ext-install \
         pdo_mysql \
         mbstring \
@@ -44,65 +44,41 @@ RUN apt-get update \
         bcmath \
         intl \
         zip \
-# Configure and install GD
  && docker-php-ext-configure gd --with-jpeg \
  && docker-php-ext-install gd
 
-# Enable Apache mod_rewrite for .htaccess support
 RUN a2enmod rewrite
 
-# Expose port 80
 EXPOSE 80
 
-# Build frontend assets
-FROM node:20-alpine AS node_builder
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
-COPY webpack.config.js ./
-COPY app/resources ./app/resources
-RUN npm run build
-
-# Second stage: Apache + PHP setup (continued)
-# Copy the application source
+# Copy application source
 COPY . /var/www/html
 
-# Copy default files in /public/img so they can be copied if needed in entrypoint, also create volume
+# Overwrite pre-committed JS bundle with the freshly built one
+COPY --from=node_builder /app/public/js/app.js /var/www/html/public/js/app.js
+
+# Copy default files in /public/img so they can be copied if needed in entrypoint
 RUN mkdir /tmp/img \
  && cp /var/www/html/public/img/* /tmp/img
 VOLUME ["/var/www/html/public/img"]
 
-# Create volume for logs
 VOLUME ["/var/www/html/app/logs"]
-
-# Create volume for backups
 VOLUME ["/var/www/html/public/backup"]
 
-# Copy themes and create volume for themes
 RUN mkdir /tmp/themes \
  && cp -r /var/www/html/public/themes/* /tmp/themes
 VOLUME ["/var/www/html/public/themes"]
 
-# Copy migration list and create volume for migrations
 RUN mkdir /tmp/migrations \
  && cp /var/www/html/app/migrations/* /tmp/migrations
 VOLUME ["/var/www/html/app/migrations"]
 
-# Copy the PHP overrides
 COPY ./99-php.ini /usr/local/etc/php/conf.d/
 
-# Copy the Composer dependencies from the first stage
 COPY --from=composer /app/vendor/ /var/www/html/vendor/
 COPY --from=composer /usr/bin/composer /usr/local/bin/composer
 
-# Overwrite the bundled JS with our freshly built version
-COPY --from=node_builder /app/public/js/app.js /var/www/html/public/js/app.js
-
-# Copy docker-entrypoint.sh into the container
 COPY --chmod=555 docker-entrypoint.sh /usr/local/bin/
 
-# Set the script as the entrypoint
 ENTRYPOINT ["docker-entrypoint.sh"]
-
-# Start Apache server (CMD)
 CMD ["apache2-foreground"]
