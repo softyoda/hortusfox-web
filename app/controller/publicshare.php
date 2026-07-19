@@ -6,7 +6,7 @@
  * Serves read-only public views of locations and plants via share tokens.
  * Intentionally does NOT extend BaseController so auth is never enforced.
  */
-class PublicShareController extends Asatru\Controller\Controller {
+class PublicshareController extends Asatru\Controller\Controller {
     const PUBLIC_LAYOUT = 'public_layout';
 
     /**

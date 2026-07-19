@@ -50,7 +50,7 @@ class BaseController extends Asatru\Controller\Controller {
 			'/cronjob/backup/auto'
 		);
 
-		// Public share routes bypass auth entirely (handled by PublicShareController)
+		// Public share routes bypass auth entirely (handled by PublicshareController)
 		if (strpos($url, '/public/share/') === 0) {
 			return;
 		}

@@ -168,10 +168,10 @@ return [
     array('/share/photo/remove', 'ANY', 'share@remove_photo'),
 
     /** Public Share Controller */
-    array('/public/share/token/{token}', 'GET', 'public_share@view_shared'),
-    array('/public/share/log/fetch', 'ANY', 'public_share@fetch_log'),
-    array('/public/share/create', 'POST', 'public_share@create_share'),
-    array('/public/share/revoke', 'POST', 'public_share@revoke_share'),
+    array('/public/share/token/{token}', 'GET', 'publicshare@view_shared'),
+    array('/public/share/log/fetch', 'ANY', 'publicshare@fetch_log'),
+    array('/public/share/create', 'POST', 'publicshare@create_share'),
+    array('/public/share/revoke', 'POST', 'publicshare@revoke_share'),
 
     /** API Controller */
     array('/api/plants/get', 'ANY', 'api@get_plant'),
