@@ -1948,7 +1948,7 @@ window.createVueInstance = function(element) {
                                     <div class="control" style="display:flex; align-items:center; gap:0.5rem;">
                                         <a class="is-default-link" href="` + window.vue.plantSearchURL(plantName) + `">` + plantName + `</a>
                                         <span>(` + score + `%)</span>
-                                        <button type="button" class="button is-small is-success" title="Add to collection" onclick="window.vue.addPlantFromScan(` + JSON.stringify(plantName) + `, ` + JSON.stringify(imageToken) + `)">
+                                        <button type="button" class="button is-small is-success quickscan-add-btn" title="Add to collection">
                                             <i class="fas fa-plus"></i>
                                         </button>
                                     </div>
@@ -1957,6 +1957,16 @@ window.createVueInstance = function(element) {
                         });
 
                         dest.innerHTML += '</fieldset>';
+
+                        // Attach click handlers via data attributes to avoid quote-escaping issues in innerHTML.
+                        const addBtns = dest.querySelectorAll('.quickscan-add-btn');
+                        response.data.forEach(function(elem, index) {
+                            if (addBtns[index]) {
+                                addBtns[index].addEventListener('click', function() {
+                                    window.vue.addPlantFromScan(elem.species.scientificNameWithoutAuthor, imageToken);
+                                });
+                            }
+                        });
 
                         document.getElementById(actionIcon).classList.remove('fa-spinner');
                         document.getElementById(actionIcon).classList.remove('fa-spin');
