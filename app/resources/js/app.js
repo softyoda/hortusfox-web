@@ -1948,7 +1948,7 @@ window.createVueInstance = function(element) {
                                     <div class="control" style="display:flex; align-items:center; gap:0.5rem;">
                                         <a class="is-default-link" href="` + window.vue.plantSearchURL(plantName) + `">` + plantName + `</a>
                                         <span>(` + score + `%)</span>
-                                        <button class="button is-small is-success" title="Add to collection" onclick="window.vue.addPlantFromScan(` + JSON.stringify(plantName) + `, ` + JSON.stringify(imageToken) + `)">
+                                        <button type="button" class="button is-small is-success" title="Add to collection" onclick="window.vue.addPlantFromScan(` + JSON.stringify(plantName) + `, ` + JSON.stringify(imageToken) + `)">
                                             <i class="fas fa-plus"></i>
                                         </button>
                                     </div>
@@ -1973,7 +1973,7 @@ window.createVueInstance = function(element) {
             },
 
             addPlantFromScan: function(plantName, imageToken) {
-                // Close the scan results modal.
+                // Close the scan results modal first.
                 window.vue.bShowQuickScanPlant = false;
 
                 // Pre-fill the add-plant form.
@@ -1997,8 +1997,10 @@ window.createVueInstance = function(element) {
                     previewWrap.classList.add('is-hidden');
                 }
 
-                // Open the add-plant modal.
-                window.addNewPlant();
+                // Open the add-plant modal after a tick so Vue closes the scan modal first.
+                setTimeout(function() {
+                    window.addNewPlant();
+                }, 50);
             },
 
             clearScanPhotoPreview: function() {
