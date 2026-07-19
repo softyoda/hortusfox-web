@@ -27,6 +27,7 @@ RUN apt-get update \
         libonig-dev \
         libxml2-dev \
         libzip-dev \
+        libicu-dev \
         zip \
         unzip \
         git \
