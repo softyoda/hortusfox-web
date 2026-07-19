@@ -54,6 +54,16 @@ RUN a2enmod rewrite
 # Expose port 80
 EXPOSE 80
 
+# Build frontend assets
+FROM node:20-alpine AS node_builder
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY webpack.config.js ./
+COPY app/resources ./app/resources
+RUN npm run build
+
+# Second stage: Apache + PHP setup (continued)
 # Copy the application source
 COPY . /var/www/html
 
@@ -84,6 +94,9 @@ COPY ./99-php.ini /usr/local/etc/php/conf.d/
 # Copy the Composer dependencies from the first stage
 COPY --from=composer /app/vendor/ /var/www/html/vendor/
 COPY --from=composer /usr/bin/composer /usr/local/bin/composer
+
+# Overwrite the bundled JS with our freshly built version
+COPY --from=node_builder /app/public/js/app.js /var/www/html/public/js/app.js
 
 # Copy docker-entrypoint.sh into the container
 COPY --chmod=555 docker-entrypoint.sh /usr/local/bin/
