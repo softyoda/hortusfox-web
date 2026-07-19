@@ -20,15 +20,8 @@
 		<div class="is-inline-block is-action-button-margin"><a class="is-default-link is-fixed-button-link is-fixed-margin-left-mobile" href="{{ url('/') }}">{{ __('app.back_to_dashboard') }}</a></div>
 
 		@if (app('enable_public_sharing', false))
-		<div class="is-inline-block is-action-button-margin" id="share-location-wrap-{{ $location }}">
-			@if ($location_share)
-				<span style="font-size:.85rem;">
-					<a class="button is-small" href="{{ url('/public/share/token/' . $location_share->get('token')) }}" target="_blank" title="Open public view"><i class="fas fa-external-link-alt"></i>&nbsp;Public link</a>&nbsp;
-					<a class="button is-small is-danger" href="javascript:void(0);" onclick="revokeShare('location', {{ $location }}, 'share-location-wrap-{{ $location }}');" title="Revoke public link"><i class="fas fa-unlink"></i></a>
-				</span>
-			@else
-				<a class="button is-small is-link" href="javascript:void(0);" onclick="createShare('location', {{ $location }}, 'share-location-wrap-{{ $location }}');" title="Generate public share link"><i class="fas fa-share-alt"></i>&nbsp;Share collection</a>
-			@endif
+		<div class="is-inline-block is-action-button-margin">
+			<a class="button is-small is-link" href="javascript:void(0);" onclick="copyPublicLink('{{ url('/plants/location/' . $location) }}');" title="Copy public link to clipboard"><i class="fas fa-share-alt"></i>&nbsp;Copy public link</a>
 		</div>
 		@endif
 	</div>
@@ -198,33 +191,14 @@
 
 @if (app('enable_public_sharing', false))
 <script>
-function createShare(type, entityId, wrapId) {
-    if (!confirm('Generate a public share link for this ' + type + '? Anyone with the link can view it (read-only).')) return;
-    fetch('/public/share/create', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: 'type=' + encodeURIComponent(type) + '&entity_id=' + encodeURIComponent(entityId)
-    }).then(r => r.json()).then(data => {
-        if (data.code === 200) {
-            location.reload();
-        } else {
-            alert('Error: ' + (data.msg || 'Unknown error'));
-        }
-    });
-}
-function revokeShare(type, entityId, wrapId) {
-    if (!confirm('Revoke the public link for this ' + type + '? It will no longer be accessible.')) return;
-    fetch('/public/share/revoke', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: 'type=' + encodeURIComponent(type) + '&entity_id=' + encodeURIComponent(entityId)
-    }).then(r => r.json()).then(data => {
-        if (data.code === 200) {
-            location.reload();
-        } else {
-            alert('Error: ' + (data.msg || 'Unknown error'));
-        }
-    });
+function copyPublicLink(url) {
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(function() {
+            alert('Public link copied to clipboard:\n' + url);
+        });
+    } else {
+        window.prompt('Copy this link:', url);
+    }
 }
 </script>
 @endif

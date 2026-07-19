@@ -61,30 +61,47 @@
         </div>
 
         <script>
-            // Simple Vue app just to handle log "load more" on plant page
+            // Simple Vue app to handle log "load more" on public plant page
             const app = Vue.createApp({
                 data() {
                     return {
                         logEntries: [],
                         lastLogId: null,
                         noMoreLogs: false,
-                        plantToken: null,
+                        _plantId: null,
                     };
                 },
                 methods: {
+                    // Called when viewing via direct /plants/details/{id} URL
+                    initLogDirect(initialEntries, plantId) {
+                        this._plantId = plantId;
+                        this.logEntries = initialEntries;
+                        if (initialEntries.length > 0) {
+                            this.lastLogId = initialEntries[initialEntries.length - 1].id;
+                        }
+                    },
+                    // Legacy: called when viewing via /public/share/token/... (token-based)
                     initLog(initialEntries, plantToken) {
-                        this.plantToken = plantToken;
+                        this._plantToken = plantToken;
                         this.logEntries = initialEntries;
                         if (initialEntries.length > 0) {
                             this.lastLogId = initialEntries[initialEntries.length - 1].id;
                         }
                     },
                     loadMoreLog() {
-                        if (!this.plantToken || !this.lastLogId) return;
-                        fetch('/public/share/log/fetch?token=' + encodeURIComponent(this.plantToken) + '&paginate=' + this.lastLogId)
+                        if (!this.lastLogId) return;
+                        let url;
+                        if (this._plantId) {
+                            url = '/plants/log/fetch?plant=' + this._plantId + '&paginate=' + this.lastLogId;
+                        } else if (this._plantToken) {
+                            url = '/public/share/log/fetch?token=' + encodeURIComponent(this._plantToken) + '&paginate=' + this.lastLogId;
+                        } else {
+                            return;
+                        }
+                        fetch(url)
                             .then(r => r.json())
                             .then(resp => {
-                                if (resp.code === 200 && resp.data.length > 0) {
+                                if (resp.code === 200 && resp.data && resp.data.length > 0) {
                                     this.logEntries = this.logEntries.concat(resp.data);
                                     this.lastLogId = resp.data[resp.data.length - 1].id;
                                     if (resp.data.length < 10) this.noMoreLogs = true;

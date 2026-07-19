@@ -169,6 +169,7 @@ return [
 
     /** Public Share Controller */
     array('/public/share/token/{token}', 'GET', 'publicshare@view_shared'),
+    array('/public/share/token/{token}/plant/{plant_id}', 'GET', 'publicshare@view_plant_via_collection'),
     array('/public/share/log/fetch', 'ANY', 'publicshare@fetch_log'),
     array('/public/share/create', 'POST', 'publicshare@create_share'),
     array('/public/share/revoke', 'POST', 'publicshare@revoke_share'),

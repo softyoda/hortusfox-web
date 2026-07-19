@@ -31,6 +31,11 @@ class PlantsController extends BaseController {
 		$location = $request->arg('id');
 
 		if (!LocationsModel::isActive($location)) {
+			// If public sharing is on and user is not logged in, show 404 instead of redirect loop
+			if (!$user && app('enable_public_sharing', false)) {
+				http_response_code(404);
+				exit('Location not found.');
+			}
 			return redirect('/');
 		}
 
@@ -39,8 +44,17 @@ class PlantsController extends BaseController {
 		$show = $request->params()->query('show', null);
 
 		$plants = PlantsModel::getAll($location, $sorting, $direction);
-
 		$location_log_entries = LocationLogModel::getLogEntries($location);
+
+		// Unauthenticated public visitor: render read-only layout
+		if (!$user && app('enable_public_sharing', false)) {
+			return view('public_layout', ['content', 'public_collection'], [
+				'location_data' => LocationsModel::getLocationById($location),
+				'plants' => $plants,
+				'location_token' => null,
+				'location_log_entries' => $location_log_entries,
+			]);
+		}
 
 		if ((is_string($show)) && ((isset($_COOKIE['list_show_style'])) && ($_COOKIE['list_show_style'] !== $show))) {
 			setcookie('list_show_style', $show, time() + 31536000, '/');
@@ -176,7 +190,38 @@ class PlantsController extends BaseController {
 
 		$plant_data = PlantsModel::getDetails($plant_id);
 		if (!$plant_data) {
+			if (!$user && app('enable_public_sharing', false)) {
+				http_response_code(404);
+				exit('Plant not found.');
+			}
 			return redirect('/');
+		}
+
+		$tagstr = $plant_data->get('tags') ?? '';
+		if (substr($tagstr, strlen($tagstr) - 1, 1) !== ' ') {
+			$tagstr .= ' ';
+		}
+		$tags = explode(' ', $tagstr);
+
+		$photos = PlantPhotoModel::getPlantGallery($plant_id);
+		$custom_attributes = CustPlantAttrModel::getForPlant($plant_id);
+		$plant_log_entries = PlantLogModel::getLogEntries($plant_id);
+
+		// Unauthenticated public visitor: render read-only layout
+		if (!$user && app('enable_public_sharing', false)) {
+			$location_link = url('/plants/location/' . $plant_data->get('location'));
+			return view('public_layout', ['content', 'public_plant'], [
+				'plant' => $plant_data,
+				'photos' => $photos,
+				'tags' => array_filter($tags),
+				'custom_attributes' => $custom_attributes,
+				'plant_log_entries' => $plant_log_entries,
+				'plant_token' => null,        // log AJAX will use collection URL
+				'location_token' => null,
+				'collection_token' => null,
+				'public_location_url' => $location_link,
+				'public_plant_id' => $plant_id,
+			]);
 		}
 
 		$plant_ident = '#' . sprintf('%04d', $plant_data->get('id'));
@@ -195,23 +240,11 @@ class PlantsController extends BaseController {
 			$orig_plant = PlantsModel::getDetails($plant_data->get('clone_origin'));
 		}
 
-		$tagstr = $plant_data->get('tags');
-		if (substr($tagstr, strlen($tagstr) - 1, 1) !== ' ') {
-			$tagstr .= ' ';
-		}
-
-		$tags = explode(' ', $tagstr);
-
-		$photos = PlantPhotoModel::getPlantGallery($plant_id);
-		$custom_attributes = CustPlantAttrModel::getForPlant($plant_id);
-		$plant_log_entries = PlantLogModel::getLogEntries($plant_id);
-
 		$plant_tasks = [];
 		$plant_task_refs = PlantTasksRefModel::getForPlant($plant_id);
 		if (is_countable($plant_task_refs)) {
 			foreach ($plant_task_refs as $plant_task_ref) {
 				$task_item = TasksModel::getTask($plant_task_ref->get('task_id'));
-
 				if (is_object($task_item)) {
 					$plant_tasks[] = $task_item;
 				}

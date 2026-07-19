@@ -1,8 +1,10 @@
 <div class="public-breadcrumb">
-    @if ($location_token)
-        <a href="{{ url('/public/share/token/' . $location_token) }}">&#8592; Back to collection</a>
+    @if (isset($public_location_url) && $public_location_url)
+        <a class="back-link" href="{{ $public_location_url }}">&#8592; Back to collection</a>
+    @elseif ($location_token)
+        <a class="back-link" href="{{ url('/public/share/token/' . $location_token) }}">&#8592; Back to collection</a>
     @else
-        <a href="javascript:history.back()">&#8592; Back</a>
+        <a class="back-link" href="javascript:history.back()">&#8592; Back</a>
     @endif
 </div>
 
@@ -204,10 +206,8 @@
 <script>
     (function() {
         const initialLog = <?php echo json_encode($initial_log); ?>;
-        const plantToken = <?php echo json_encode($plant_token); ?>;
-        app.initLog(initialLog, plantToken);
-
-        // Mount the log section inside the existing Vue app
-        document.getElementById('public-log-section').__vue_app__ = undefined;
+        const plantId = <?php echo (int)$plant->get('id'); ?>;
+        // Use the direct /plants/log/fetch endpoint (now public when sharing is enabled)
+        app.initLogDirect(initialLog, plantId);
     })();
 </script>

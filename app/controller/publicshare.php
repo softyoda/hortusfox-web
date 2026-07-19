@@ -79,21 +79,58 @@ class PublicshareController extends Asatru\Controller\Controller {
 
         $plants = PlantsModel::getAll($location_id);
         $location_share = PublicShareModel::getByEntity(PublicShareModel::TYPE_LOCATION, $location_id);
+        $location_token = $location_share ? $location_share->get('token') : null;
+        $location_log_entries = LocationLogModel::getLogEntries($location_id);
 
         return view(self::PUBLIC_LAYOUT, ['content', 'public_collection'], [
             'location_data' => $location_data,
             'plants' => $plants,
-            'location_token' => $location_share ? $location_share->get('token') : null,
+            'location_token' => $location_token,
+            'location_log_entries' => $location_log_entries,
         ]);
+    }
+
+    /**
+     * Handles URL: /public/share/token/{token}/plant/{plant_id}
+     *
+     * Allows viewing any plant belonging to a shared collection, even if the
+     * plant itself does not have its own individual share token.
+     *
+     * @param Asatru\Controller\ControllerArg $request
+     * @return Asatru\View\ViewHandler
+     */
+    public function view_plant_via_collection($request)
+    {
+        $this->requireSharingEnabled();
+
+        $token = $request->arg('token');
+        $plant_id = (int)$request->arg('plant_id');
+
+        // Verify the collection token is valid
+        $share = PublicShareModel::getByToken($token);
+        if (!$share || $share->get('type') !== PublicShareModel::TYPE_LOCATION) {
+            http_response_code(404);
+            exit('Share link not found.');
+        }
+
+        // Verify the plant belongs to that location
+        $plant = PlantsModel::getDetails($plant_id);
+        if (!$plant || (int)$plant->get('location') !== (int)$share->get('entity_id')) {
+            http_response_code(404);
+            exit('Plant not found in this collection.');
+        }
+
+        return $this->view_plant($plant_id, $token);
     }
 
     /**
      * Render a read-only plant detail view.
      *
-     * @param int $plant_id
+     * @param int         $plant_id
+     * @param string|null $collection_token  When called from collection context
      * @return Asatru\View\ViewHandler
      */
-    private function view_plant($plant_id)
+    private function view_plant($plant_id, $collection_token = null)
     {
         $plant = PlantsModel::getDetails($plant_id);
         if (!$plant) {
@@ -114,14 +151,24 @@ class PublicshareController extends Asatru\Controller\Controller {
         $plant_share = PublicShareModel::getByEntity(PublicShareModel::TYPE_PLANT, $plant_id);
         $location_share = PublicShareModel::getByEntity(PublicShareModel::TYPE_LOCATION, $plant->get('location'));
 
+        // Resolve the back-link token: prefer the individual plant token's parent collection,
+        // fall back to a passed collection_token, then the location's own share.
+        $resolved_location_token = $collection_token
+            ?? ($location_share ? $location_share->get('token') : null);
+
+        // For log pagination we need a token. If the plant has its own, use it; otherwise
+        // let the view use collection-context URL for log AJAX.
+        $resolved_plant_token = $plant_share ? $plant_share->get('token') : null;
+
         return view(self::PUBLIC_LAYOUT, ['content', 'public_plant'], [
             'plant' => $plant,
             'photos' => $photos,
             'tags' => $tags,
             'custom_attributes' => $custom_attributes,
             'plant_log_entries' => $plant_log_entries,
-            'plant_token' => $plant_share ? $plant_share->get('token') : null,
-            'location_token' => $location_share ? $location_share->get('token') : null,
+            'plant_token' => $resolved_plant_token,
+            'location_token' => $resolved_location_token,
+            'collection_token' => $collection_token,  // raw, for AJAX log URL fallback
         ]);
     }
 
@@ -147,11 +194,26 @@ class PublicshareController extends Asatru\Controller\Controller {
             }
 
             $share = PublicShareModel::getByToken($token);
-            if (!$share || $share->get('type') !== PublicShareModel::TYPE_PLANT) {
+            if (!$share) {
                 throw new \Exception('Invalid token');
             }
 
-            $plant_id = $share->get('entity_id');
+            // Token can be a plant token OR a collection token + plant_id param
+            if ($share->get('type') === PublicShareModel::TYPE_PLANT) {
+                $plant_id = $share->get('entity_id');
+            } elseif ($share->get('type') === PublicShareModel::TYPE_LOCATION) {
+                $plant_id = (int)$request->params()->query('plant_id', 0);
+                if ($plant_id <= 0) {
+                    throw new \Exception('Missing plant_id');
+                }
+                // Verify the plant belongs to the shared location
+                $plant_check = PlantsModel::getDetails($plant_id);
+                if (!$plant_check || (int)$plant_check->get('location') !== (int)$share->get('entity_id')) {
+                    throw new \Exception('Plant not in collection');
+                }
+            } else {
+                throw new \Exception('Invalid token type');
+            }
             $entries = PlantLogModel::getLogEntries($plant_id, $paginate);
 
             $result = [];
