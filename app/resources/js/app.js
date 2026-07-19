@@ -1929,17 +1929,28 @@ window.createVueInstance = function(element) {
                 const form = document.getElementById(target);
                 const data = new FormData(form);
 
+                // Keep a reference to the selected file for the preview thumbnail.
+                const fileInput = form.querySelector('input[type="file"]');
+                const selectedFile = (fileInput && fileInput.files.length > 0) ? fileInput.files[0] : null;
+
                 window.vue.ajaxRequest('post', window.location.origin + '/plants/details/identify', data, function(response) {
                     if (response.code == 200) {
                         let dest = document.getElementById(destContent);
+                        const imageToken = response.image_token || '';
 
                         dest.innerHTML = '<fieldset>';
 
                         response.data.forEach(function(elem, index) {
+                            const plantName = elem.species.scientificNameWithoutAuthor;
+                            const score = (elem.score * 100).toFixed(2);
                             dest.innerHTML += `
                                 <div class="field">
-                                    <div class="control">
-                                        <div><a class="is-default-link" href="` + window.vue.plantSearchURL(elem.species.scientificNameWithoutAuthor) + `">` + elem.species.scientificNameWithoutAuthor + `</a> (` + (elem.score * 100).toFixed(2) + '%)' + `</div>
+                                    <div class="control" style="display:flex; align-items:center; gap:0.5rem;">
+                                        <a class="is-default-link" href="` + window.vue.plantSearchURL(plantName) + `">` + plantName + `</a>
+                                        <span>(` + score + `%)</span>
+                                        <button class="button is-small is-success" title="Add to collection" onclick="window.vue.addPlantFromScan(` + JSON.stringify(plantName) + `, ` + JSON.stringify(imageToken) + `)">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
                                     </div>
                                 </div>
                                 `;
@@ -1951,11 +1962,55 @@ window.createVueInstance = function(element) {
                         document.getElementById(actionIcon).classList.remove('fa-spin');
                         document.getElementById(actionIcon).classList.add('fa-microscope');
 
+                        // Store the selected file object so we can show a preview later.
+                        window.vue._quickScanFile = selectedFile;
+
                         window.vue.bShowQuickScanPlant = true;
                     } else {
                         alert(response.msg);
                     }
                 });
+            },
+
+            addPlantFromScan: function(plantName, imageToken) {
+                // Close the scan results modal.
+                window.vue.bShowQuickScanPlant = false;
+
+                // Pre-fill the add-plant form.
+                const nameInput = document.getElementById('inpAddPlantName');
+                if (nameInput) nameInput.value = plantName;
+
+                const tokenInput = document.getElementById('inpScanPhotoToken');
+                if (tokenInput) tokenInput.value = imageToken;
+
+                // Show a preview of the captured image if we have the File object.
+                const previewWrap = document.getElementById('inpScanPhotoPreviewWrap');
+                const previewImg  = document.getElementById('inpScanPhotoPreview');
+                if (previewImg && window.vue._quickScanFile) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        previewImg.src = e.target.result;
+                        if (previewWrap) previewWrap.classList.remove('is-hidden');
+                    };
+                    reader.readAsDataURL(window.vue._quickScanFile);
+                } else if (previewWrap) {
+                    previewWrap.classList.add('is-hidden');
+                }
+
+                // Open the add-plant modal.
+                window.addNewPlant();
+            },
+
+            clearScanPhotoPreview: function() {
+                const tokenInput = document.getElementById('inpScanPhotoToken');
+                if (tokenInput) tokenInput.value = '';
+                const nameInput = document.getElementById('inpAddPlantName');
+                if (nameInput) nameInput.value = '';
+                const previewWrap = document.getElementById('inpScanPhotoPreviewWrap');
+                if (previewWrap) previewWrap.classList.add('is-hidden');
+                const previewImg = document.getElementById('inpScanPhotoPreview');
+                if (previewImg) previewImg.src = '';
+                window.vue._quickScanFile = null;
             },
 
             saveLocationNotes: function(location, notes, reselem) {

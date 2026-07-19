@@ -259,8 +259,31 @@ class PlantsController extends BaseController {
 
 		$name = $request->params()->query('name', null);
 		$location = $request->params()->query('location', null);
+		$scan_photo_token = $request->params()->query('scan_photo_token', null);
+
+		// If a scan image token was provided, move it into $_FILES so addPlant() picks it up.
+		if ($scan_photo_token && preg_match('/^[a-f0-9]+\.[a-z]+$/i', $scan_photo_token)) {
+			$scan_image_path = public_path('/img/' . $scan_photo_token);
+			if (file_exists($scan_image_path)) {
+				$_FILES['photo'] = [
+					'name'     => $scan_photo_token,
+					'type'     => mime_content_type($scan_image_path),
+					'tmp_name' => $scan_image_path,
+					'error'    => UPLOAD_ERR_OK,
+					'size'     => filesize($scan_image_path),
+				];
+			}
+		}
 
 		$plant_id = PlantsModel::addPlant($name, $location);
+
+		// Clean up the scan image after it has been used.
+		if ($scan_photo_token && preg_match('/^[a-f0-9]+\.[a-z]+$/i', $scan_photo_token)) {
+			$scan_image_path = public_path('/img/' . $scan_photo_token);
+			if (file_exists($scan_image_path)) {
+				unlink($scan_image_path);
+			}
+		}
 
 		return redirect('/plants/details/' . $plant_id);
 	}
@@ -606,11 +629,14 @@ class PlantsController extends BaseController {
 				throw new \Exception('Invalid results returned');
 			}
 
-			unlink($image_file);
+			// Keep the image on disk so the user can attach it when adding the plant.
+			// It will be consumed and removed by add_plant() or cleaned up on next scan.
+			$image_token = basename($image_file);
 	
 			return json([
 				'code' => 200,
-				'data' => $data->results
+				'data' => $data->results,
+				'image_token' => $image_token
 			]);
 		} catch (\Exception $e) {
 			if ((isset($image_file)) && (is_string($image_file)) && (file_exists($image_file))) {

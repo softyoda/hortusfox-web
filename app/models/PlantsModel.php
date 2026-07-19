@@ -321,9 +321,17 @@ class PlantsModel extends \Asatru\Database\Model {
 
                 $file_name = md5(random_bytes(55) . date('Y-m-d H:i:s'));
 
-                move_uploaded_file($_FILES['photo']['tmp_name'], public_path('/img/' . $file_name . '.' . $file_ext));
+                $dest = public_path('/img/' . $file_name . '.' . $file_ext);
 
-                if (!UtilsModule::createThumbFile(public_path('/img/' . $file_name . '.' . $file_ext), UtilsModule::getImageType($file_ext, public_path('/img/' . $file_name)), public_path('/img/' . $file_name), $file_ext)) {
+                // move_uploaded_file() only works for real HTTP uploads; for scan images
+                // already saved on disk we fall back to rename/copy.
+                if (!move_uploaded_file($_FILES['photo']['tmp_name'], $dest)) {
+                    if (!rename($_FILES['photo']['tmp_name'], $dest)) {
+                        copy($_FILES['photo']['tmp_name'], $dest);
+                    }
+                }
+
+                if (!UtilsModule::createThumbFile($dest, UtilsModule::getImageType($file_ext, public_path('/img/' . $file_name)), public_path('/img/' . $file_name), $file_ext)) {
                     throw new \Exception('createThumbFile failed');
                 }
 

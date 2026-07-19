@@ -41,16 +41,25 @@
 				<div class="modal-card">
 					<header class="modal-card-head is-stretched">
 						<p class="modal-card-title">{{ __('app.add_plant') }}</p>
-						<button class="delete" aria-label="close" onclick="window.vue.bShowAddPlant = false;"></button>
+						<button class="delete" aria-label="close" onclick="window.vue.bShowAddPlant = false; window.vue.clearScanPhotoPreview();"></button>
 					</header>
 					<section class="modal-card-body is-stretched">
 						<form id="frmAddPlant" method="POST" action="{{ url('/plants/add') }}" enctype="multipart/form-data">
 							@csrf
 
+							<input type="hidden" name="scan_photo_token" id="inpScanPhotoToken">
+
 							<div class="field">
 								<label class="label">{{ __('app.name') }}</label>
 								<div class="control">
-									<input type="text" class="input" name="name" required>
+									<input type="text" class="input" name="name" id="inpAddPlantName" required>
+								</div>
+							</div>
+
+							<div id="inpScanPhotoPreviewWrap" class="field is-hidden">
+								<label class="label">{{ __('app.photo') }}</label>
+								<div class="control">
+									<img id="inpScanPhotoPreview" src="" style="max-height:120px; border-radius:4px;">
 								</div>
 							</div>
 
@@ -70,7 +79,7 @@
 					</section>
 					<footer class="modal-card-foot is-stretched">
 						<button class="button is-success" id="button-add-plant" onclick="window.vue.validateAndSubmitForm(document.getElementById('frmAddPlant'), this);">{{ __('app.add') }}</button>
-						<button class="button" onclick="window.vue.bShowAddPlant = false;">{{ __('app.cancel') }}</button>
+						<button class="button" onclick="window.vue.bShowAddPlant = false; window.vue.clearScanPhotoPreview();">{{ __('app.cancel') }}</button>
 					</footer>
 				</div>
 			</div>
